@@ -30,17 +30,21 @@
 
 ### 环境要求
 
-- **Python >= 3.10（64 位）**（推荐 3.11 或 3.12）
+- **Python >= 3.10（64 位）** — 推荐 3.11 或 3.12
 - 支持 macOS、Windows、Linux
 
 > **必须使用 64 位 Python。** NumPy、SciPy 等依赖库不提供 32 位版本。
-> 验证方法：`python -c "import struct; print(struct.calcsize('P') * 8, 'bit')"` 输出应为 `64 bit`。
+>
+> 验证方法：
+> ```bash
+> python -c "import struct; print(struct.calcsize('P') * 8, 'bit')"
+> # 输出应为 64 bit
+> ```
 
 ### 安装 Python
 
-如果电脑没有安装 Python，请按以下步骤安装：
+#### macOS
 
-**macOS：**
 ```bash
 # 方法1: 使用 Homebrew（推荐）
 brew install python
@@ -49,36 +53,70 @@ brew install python
 # 访问 https://www.python.org/downloads/ 下载最新版安装包
 ```
 
-**Windows：**
+#### Windows
+
 1. 访问 https://www.python.org/downloads/
 2. 下载 Python 3.11 或 3.12 安装包
 3. **重要：** 安装时勾选 ✅ **"Add Python to PATH"**
-4. 完成安装后，打开 CMD 验证：
+4. 验证安装：
    ```cmd
    python --version
    ```
 
-**验证安装：**
+#### 多版本 Python 管理
+
+如果电脑上安装了多个 Python 版本（32 位 / 64 位共存），推荐以下方法：
+
+**查看已安装的 Python：**
 ```bash
-python --version   # 应显示 Python 3.10.x 或更高
+# macOS/Linux
+which -a python python3
+
+# Windows
+where python
+py -0p
 ```
 
-### 安装项目依赖
+**指定版本创建虚拟环境：**
+```bash
+# 使用 python3.10 创建
+python3.10 -m venv .venv
+
+# 或用完整路径
+/usr/bin/python3 -m venv .venv
+```
+
+**Windows 使用 py 启动器：**
+```bash
+# 列出所有已安装版本
+py -0
+
+# 用指定版本创建虚拟环境
+py -3.10 -m venv .venv
+```
+
+**推荐：使用 pyenv 管理多版本**
+```bash
+# 安装 pyenv（macOS）
+brew install pyenv
+
+# 安装指定版本
+pyenv install 3.10.13
+
+# 设置项目使用的版本
+pyenv local 3.10.13
+```
+
+### 安装依赖
 
 #### 方法一：快速安装（推荐新手）
 
-不用虚拟环境，直接安装，最简单：
+不用虚拟环境，最简单：
 
 ```bash
-# 克隆项目
 git clone https://github.com/lulf87/af-analyzer.git
 cd af-analyzer
-
-# 直接安装依赖
 pip install -r requirements.txt
-
-# 运行
-python -m streamlit run app.py
 ```
 
 > **国内用户加速：** `pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple`
@@ -88,7 +126,6 @@ python -m streamlit run app.py
 隔离项目依赖，避免与其他项目冲突：
 
 ```bash
-# 克隆项目
 git clone https://github.com/lulf87/af-analyzer.git
 cd af-analyzer
 
@@ -97,62 +134,34 @@ python -m venv .venv
 
 # 激活虚拟环境
 source .venv/bin/activate      # macOS/Linux
-.venv\Scripts\activate         # Windows (CMD)
+.venv\Scripts\activate         # Windows CMD
+.venv\Scripts\Activate.ps1     # Windows PowerShell
 
 # 安装依赖
 pip install -r requirements.txt
-
-# 运行
-streamlit run app.py
 ```
 
 ### 运行
 
 ```bash
 streamlit run app.py
+
+# Windows 如果提示 streamlit 无法识别
+python -m streamlit run app.py
 ```
 
-> **Windows 用户：** 如果提示 "streamlit 无法识别"，请使用：
-> ```cmd
-> python -m streamlit run app.py
-> ```
+首次运行时，Streamlit 会显示欢迎页面，按 **Enter** 跳过即可。
 
 浏览器会自动打开 `http://localhost:8501`，即可开始使用。
 
-### Windows 注意事项
+### 常见问题
 
-1. **确保 Python 已添加到 PATH** — 安装 Python 时勾选 "Add Python to PATH"
-
-2. **PowerShell 执行策略** — 如果无法激活虚拟环境，先运行：
-   ```powershell
-   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-   ```
-
-3. **完整流程（Windows CMD）：**
-   ```cmd
-   git clone https://github.com/lulf87/af-analyzer.git
-   cd af-analyzer
-   python -m venv .venv
-   .venv\Scripts\activate
-   pip install -r requirements.txt
-   python -m streamlit run app.py
-   ```
-
-4. **如果 `streamlit` 命令无法识别：**
-
-   首先检查 streamlit 是否安装成功：
-   ```cmd
-   pip show streamlit
-   ```
-   如果显示 "not found"，说明未安装：
-   ```cmd
-   pip install streamlit
-   ```
-
-   如果已安装但仍无法识别，使用 python -m 运行：
-   ```cmd
-   python -m streamlit run app.py
-   ```
+| 问题 | 解决方案 |
+|------|---------|
+| PowerShell 无法激活虚拟环境 | 运行 `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` |
+| `streamlit` 命令无法识别 | 使用 `python -m streamlit run app.py` |
+| pip 安装速度慢 | 使用清华镜像：`pip install xxx -i https://pypi.tuna.tsinghua.edu.cn/simple` |
+| 提示 NumPy/SciPy 安装失败 | 确保使用 64 位 Python |
 
 ## 使用流程
 
@@ -169,7 +178,7 @@ streamlit run app.py
 
 | 列名 | 类型 | 说明 |
 |------|------|------|
-| `DateTimeStr` | string | 采集时间戳 |
+| `DateTimeStr` | string | 采集时间戳（可选） |
 | `Temperature` | float | 温度值 (°C) |
 | `Space1` ~ `Space6` | float / "NaN" | 各通道位移值 |
 
@@ -177,8 +186,8 @@ JSON 示例：
 
 ```json
 [
-  {"DateTimeStr": "2025-05-07 10:24:52", "Temperature": 5.2, "Space1": 123.45, "Space2": "NaN", ...},
-  {"DateTimeStr": "2025-05-07 10:24:53", "Temperature": 5.3, "Space1": 123.50, "Space2": "NaN", ...}
+  {"DateTimeStr": "2025-05-07 10:24:52", "Temperature": 5.2, "Space1": 123.45, "Space2": "NaN"},
+  {"DateTimeStr": "2025-05-07 10:24:53", "Temperature": 5.3, "Space1": 123.50, "Space2": "NaN"}
 ]
 ```
 
@@ -197,12 +206,7 @@ JSON 示例：
 │   ├── overview_chart.py   # 多通道总览图
 │   ├── analysis_chart.py   # 切线分析图
 │   └── results_panel.py    # 结果面板与导出
-├── tests/
-│   ├── test_data_loader.py
-│   ├── test_preprocessing.py
-│   └── test_tangent_analysis.py
-├── design-system/
-│   └── af-analyzer/MASTER.md  # UI 设计规范
+├── tests/                  # 单元测试
 ├── .streamlit/config.toml  # Streamlit 主题配置
 ├── requirements.txt        # Python 依赖
 └── README.md
