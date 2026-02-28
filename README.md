@@ -62,27 +62,46 @@ python --version   # 应显示 Python 3.10.x 或更高
 
 ### 安装项目依赖
 
+#### 方法一：快速安装（推荐新手）
+
+不用虚拟环境，直接安装，最简单：
+
 ```bash
 # 克隆项目
 git clone https://github.com/lulf87/af-analyzer.git
 cd af-analyzer
 
-# 创建虚拟环境（推荐）
+# 直接安装依赖
+pip install -r requirements.txt
+
+# 运行
+python -m streamlit run app.py
+```
+
+> **国内用户加速：** `pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple`
+
+#### 方法二：使用虚拟环境（推荐开发者）
+
+隔离项目依赖，避免与其他项目冲突：
+
+```bash
+# 克隆项目
+git clone https://github.com/lulf87/af-analyzer.git
+cd af-analyzer
+
+# 创建虚拟环境
 python -m venv .venv
 
 # 激活虚拟环境
 source .venv/bin/activate      # macOS/Linux
 .venv\Scripts\activate         # Windows (CMD)
-# 或 .venv\Scripts\Activate.ps1  # Windows (PowerShell)
 
 # 安装依赖
 pip install -r requirements.txt
-```
 
-> **提示：** 如果 `pip install` 速度慢，可使用国内镜像：
-> ```bash
-> pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-> ```
+# 运行
+streamlit run app.py
+```
 
 ### 运行
 
