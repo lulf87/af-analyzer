@@ -37,8 +37,8 @@
 
 ```bash
 # 克隆项目
-git clone <仓库地址>
-cd 奥氏体变换
+git clone https://github.com/lulf87/af-analyzer.git
+cd af-analyzer
 
 # 创建虚拟环境（推荐）
 python -m venv .venv
