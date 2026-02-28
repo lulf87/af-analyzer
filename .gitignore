@@ -42,5 +42,4 @@ htmlcov/
 *.mp4
 
 # Test data (not for public repo)
-原始数据/
 标准/

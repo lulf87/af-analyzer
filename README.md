@@ -30,8 +30,11 @@
 
 ### 环境要求
 
-- **Python >= 3.10**（推荐 3.11 或 3.12）
+- **Python >= 3.10（64 位）**（推荐 3.11 或 3.12）
 - 支持 macOS、Windows、Linux
+
+> **必须使用 64 位 Python。** NumPy、SciPy 等依赖库不提供 32 位版本。
+> 验证方法：`python -c "import struct; print(struct.calcsize('P') * 8, 'bit')"` 输出应为 `64 bit`。
 
 ### 安装 Python
 
