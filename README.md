@@ -30,10 +30,37 @@
 
 ### 环境要求
 
-- Python >= 3.10
+- **Python >= 3.10**（推荐 3.11 或 3.12）
 - 支持 macOS、Windows、Linux
 
-### 安装
+### 安装 Python
+
+如果电脑没有安装 Python，请按以下步骤安装：
+
+**macOS：**
+```bash
+# 方法1: 使用 Homebrew（推荐）
+brew install python
+
+# 方法2: 从官网下载
+# 访问 https://www.python.org/downloads/ 下载最新版安装包
+```
+
+**Windows：**
+1. 访问 https://www.python.org/downloads/
+2. 下载 Python 3.11 或 3.12 安装包
+3. **重要：** 安装时勾选 ✅ **"Add Python to PATH"**
+4. 完成安装后，打开 CMD 验证：
+   ```cmd
+   python --version
+   ```
+
+**验证安装：**
+```bash
+python --version   # 应显示 Python 3.10.x 或更高
+```
+
+### 安装项目依赖
 
 ```bash
 # 克隆项目
@@ -51,6 +78,11 @@ source .venv/bin/activate      # macOS/Linux
 # 安装依赖
 pip install -r requirements.txt
 ```
+
+> **提示：** 如果 `pip install` 速度慢，可使用国内镜像：
+> ```bash
+> pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+> ```
 
 ### 运行
 
