@@ -1,0 +1,3 @@
+"""
+Af Analyzer - Test suite.
+"""

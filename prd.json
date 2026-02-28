@@ -1,0 +1,286 @@
+{
+  "project": "AfAnalyzer",
+  "branchName": "ralph/af-analyzer",
+  "description": "奥氏体相变温度分析工具 — 基于 YY/T 1771-2021 切线法，交互式计算 As 和 Af-tan",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "项目基础结构搭建",
+      "description": "作为开发者，我需要项目的基础目录结构和 Streamlit 入口文件，以便后续模块开发。",
+      "acceptanceCriteria": [
+        "创建 core/ 目录及 __init__.py",
+        "创建 ui/ 目录及 __init__.py",
+        "创建 tests/ 目录及 __init__.py",
+        "创建 app.py 作为 Streamlit 入口，运行后显示标题「奥氏体相变温度分析工具」和基本侧边栏框架",
+        "streamlit run app.py 可正常启动无报错"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "参考 CLAUDE.md 中的项目结构"
+    },
+    {
+      "id": "US-002",
+      "title": "JSON 数据加载模块",
+      "description": "作为用户，我需要加载设备导出的 JSON 文件，以便进行分析。",
+      "acceptanceCriteria": [
+        "在 core/data_loader.py 中实现 load_json(file_or_path) -> pd.DataFrame",
+        "返回 DataFrame 包含 Temperature, Space1~Space6 列",
+        "字符串 'NaN' 自动转换为 np.nan",
+        "实现 detect_valid_channels(df) -> list[str] 返回有效通道名列表（非全 NaN 的通道）",
+        "Tests pass: tests/test_data_loader.py 中至少包含 test_load_json 和 test_detect_valid_channels"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "JSON 结构参考 原始数据/2026.2.26/AFReport_SP_20250519_171458.json"
+    },
+    {
+      "id": "US-003",
+      "title": "Excel 和 CSV 数据加载",
+      "description": "作为用户，我需要加载 Excel 和 CSV 格式的数据文件。",
+      "acceptanceCriteria": [
+        "在 core/data_loader.py 中实现 load_excel(file_or_path) -> pd.DataFrame",
+        "在 core/data_loader.py 中实现 load_csv(file_or_path) -> pd.DataFrame",
+        "实现 load_file(file_or_path) -> pd.DataFrame 统一入口，根据扩展名自动分派",
+        "三种格式返回统一结构的 DataFrame（列名一致）",
+        "Tests pass: tests/test_data_loader.py 中增加 test_load_excel 和 test_load_csv"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Excel 列名应与 JSON 字段名一致: Temperature, Space1~Space6"
+    },
+    {
+      "id": "US-004",
+      "title": "数据预处理 — 按温度分组与平滑滤波",
+      "description": "作为系统，我需要将原始高频采样数据预处理为平滑曲线。",
+      "acceptanceCriteria": [
+        "在 core/preprocessing.py 中实现 group_by_temperature(df, channel) -> pd.DataFrame，按 Temperature 列分组对指定 channel 求均值",
+        "实现 smooth_data(temps, values, window_length=51, polyorder=3) -> (np.ndarray, np.ndarray)，使用 scipy.signal.savgol_filter",
+        "window_length 必须为奇数，函数内自动校正（偶数时 +1）",
+        "window_length 必须大于 polyorder，否则抛出 ValueError",
+        "输出数据点数量与输入一致",
+        "Tests pass: tests/test_preprocessing.py 中覆盖正常情况、偶数窗口校正、异常参数"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "数据预处理 — 异常值自动检测与剔除",
+      "description": "作为系统，我需要在平滑之前自动检测和剔除传感器突刺等异常数据点，避免异常值污染导数计算和最大斜率定位。实际采集数据中位移可能在极短温度区间内剧烈突变后恢复（传感器抖动/接触不良），必须自动处理。",
+      "acceptanceCriteria": [
+        "在 core/preprocessing.py 中实现 remove_outliers(temps, values, window=5, threshold=5.0) -> (np.ndarray, np.ndarray, np.ndarray[bool]) 函数",
+        "使用滚动中位数 + MAD（中位绝对偏差）阈值法检测异常点：计算每个点与滚动中位数的偏差，偏差超过 threshold × MAD 的点标记为异常",
+        "异常点使用线性插值替代（基于前后正常点插值修复）",
+        "返回值包含：修复后的 temps、修复后的 values、以及布尔掩码（True=异常点）",
+        "默认参数下对正常数据（如 AFReport_SP_20250507_102452.json）不产生误剔除",
+        "对含传感器突刺的数据（如 原始数据/2026.2.28/data2.xlsx）能正确检测并剔除突刺异常",
+        "在 analyze_channel() 高层接口中集成：group_by_temperature → remove_outliers → smooth_data → 切线分析",
+        "Tests pass: tests/test_preprocessing.py 中新增 test_remove_outliers_normal（正常数据无误剔除）和 test_remove_outliers_spike（含突刺数据正确检测）"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "此故事是 US-004 的增强，解决实际采集数据中的传感器突刺问题。算法流程：分组求均值 → 异常值检测剔除 → Savitzky-Golay 平滑。使用真实数据 原始数据/2026.2.28/data2.xlsx 验证（该数据在 ~8-10°C 处有明显传感器突刺）。"
+    },
+    {
+      "id": "US-005",
+      "title": "切线法核心 — 导数计算与最大斜率点定位",
+      "description": "作为系统，我需要从平滑曲线上计算导数并找到斜率最大的点。",
+      "acceptanceCriteria": [
+        "在 core/tangent_analysis.py 中实现 compute_derivative(temps, values) -> np.ndarray，使用 np.gradient 计算 dValue/dTemperature",
+        "实现 find_max_slope_index(derivatives, offset=0) -> int，返回绝对值最大处的索引，offset 允许手动偏移",
+        "offset 为正则向高温方向偏移，为负则向低温方向偏移",
+        "索引不越界（裁剪到有效范围内）",
+        "Tests pass: tests/test_tangent_analysis.py 中覆盖正常情况和 offset 偏移"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "切线法核心 — 基准线拟合与交点计算",
+      "description": "作为系统，我需要拟合基准线并计算交点温度得到 As 和 Af-tan。",
+      "acceptanceCriteria": [
+        "实现 fit_baseline(temps, values, t_start, t_end) -> (slope, intercept)，对指定温度范围做线性最小二乘拟合",
+        "实现 compute_tangent_at_point(temps, values, derivatives, index) -> (slope, intercept)，在指定索引处计算切线方程",
+        "实现 find_intersection(slope1, intercept1, slope2, intercept2) -> float，求两条直线交点的温度",
+        "两条线平行时返回 np.nan",
+        "实现 analyze_channel(temps, values, low_range, high_range, smooth_params, slope_offset) -> dict 高层接口，返回 As, Af_tan, 三条线的 slope/intercept, 最大斜率点温度",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "这是核心算法模块，需要仔细测试边界情况"
+    },
+    {
+      "id": "US-007",
+      "title": "UI 设计系统应用 — 深色毛玻璃 + 莫兰迪配色",
+      "description": "作为开发者，我需要将设计系统（深色毛玻璃 + 莫兰迪配色）应用到 Streamlit 界面。",
+      "acceptanceCriteria": [
+        "阅读 design-system/af-analyzer/MASTER.md 了解完整设计规范",
+        ".streamlit/config.toml 已配置为 dark 主题，primaryColor=#8B9DC3, backgroundColor=#0F0F1A, secondaryBackgroundColor=#1A1A2E, textColor=#E8E4E0",
+        "在 app.py 中通过 st.markdown 注入 MASTER.md「Streamlit Custom CSS」章节的完整 CSS（深色渐变背景、毛玻璃卡片、大圆角、Google Fonts Inter + JetBrains Mono）",
+        "Plotly 图表使用 MASTER.md 中的 PLOTLY_LAYOUT 配置（透明背景、莫兰迪色线条、浅色文字）",
+        "streamlit run app.py 启动后：深色背景 + 渐变光晕可见、毛玻璃效果可见、所有文字清晰可读"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "设计系统文件已预先创建在 design-system/af-analyzer/MASTER.md，不需要重新运行 UI/UX Pro Max 命令。后续 UI 故事必须参考该文件中的设计规范。"
+    },
+    {
+      "id": "US-008",
+      "title": "Streamlit 侧边栏 — 文件上传与通道选择",
+      "description": "作为用户，我需要在侧边栏上传数据文件并选择要分析的通道。",
+      "acceptanceCriteria": [
+        "在 ui/sidebar.py 中实现侧边栏组件函数",
+        "提供 st.file_uploader 支持 .json .xlsx .csv",
+        "上传后调用 core/data_loader 加载数据",
+        "自动检测有效通道并显示 st.selectbox 选择器",
+        "选中的数据和通道存入 st.session_state",
+        "在 app.py 中集成侧边栏",
+        "UI 样式符合 design-system/af-analyzer/MASTER.md 设计规范（深色毛玻璃 + 莫兰迪配色）",
+        "Verify in browser using Playwright MCP"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "参考 design-system/af-analyzer/MASTER.md 的配色和组件规范"
+    },
+    {
+      "id": "US-009",
+      "title": "多通道总览图",
+      "description": "作为用户，我需要看到所有有效通道的温度-位移曲线总览。",
+      "acceptanceCriteria": [
+        "在 ui/overview_chart.py 中使用 Plotly 绘制所有有效通道曲线",
+        "不同通道用莫兰迪色系（颜色从 design-system/af-analyzer/MASTER.md 取：#8B9DC3, #C4A4A4, #A4B8A4, #D4B896, #B4A4C4, #9CB8C4），带图例",
+        "当前选中通道的线条加粗高亮",
+        "X 轴: Temperature (°C)，Y 轴: 位移",
+        "支持 Plotly 交互（缩放、平移、悬停）",
+        "在 app.py 主区域上方显示",
+        "UI 样式符合 design-system/af-analyzer/MASTER.md 设计规范（深色毛玻璃 + 莫兰迪配色）",
+        "Verify in browser using Playwright MCP"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "图表配色必须参考 design-system/af-analyzer/MASTER.md 的 Chart Color Palette 章节"
+    },
+    {
+      "id": "US-010",
+      "title": "平滑参数控制面板",
+      "description": "作为用户，我需要调整平滑参数并实时预览平滑效果。",
+      "acceptanceCriteria": [
+        "在侧边栏添加「数据预处理」st.expander 区域",
+        "Savitzky-Golay 窗口大小滑块: 范围 5~201, 步长 2, 默认 51",
+        "多项式阶数滑块: 范围 1~7, 默认 3",
+        "异常值检测默认启用，在预处理区域显示检测到的异常点数量",
+        "参数变更后自动重新计算平滑数据和分析结果",
+        "UI 样式符合 design-system/af-analyzer/MASTER.md 设计规范（深色毛玻璃 + 莫兰迪配色）",
+        "Verify in browser using Playwright MCP"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "异常值检测功能来自 US-016，此处仅集成到 UI 面板中"
+    },
+    {
+      "id": "US-011",
+      "title": "切线调整控制面板",
+      "description": "作为用户，我需要手动调整三条切线的参数。",
+      "acceptanceCriteria": [
+        "在侧边栏添加「切线调整」st.expander 区域",
+        "低温基准线区间: 双端 st.slider，默认值为数据温度范围的前 15%",
+        "高温基准线区间: 双端 st.slider，默认值为数据温度范围的后 15%",
+        "中间切线偏移: st.slider，范围 -20 到 +20（索引偏移），默认 0",
+        "所有滑块有合理的默认值（自动分析结果填充）",
+        "参数变更后分析结果和图表实时更新",
+        "UI 样式符合 design-system/af-analyzer/MASTER.md 设计规范（深色毛玻璃 + 莫兰迪配色）",
+        "Verify in browser using Playwright MCP"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "单通道切线分析图",
+      "description": "作为用户，我需要看到带有三条切线和 As/Af 标注的分析图。",
+      "acceptanceCriteria": [
+        "在 ui/analysis_chart.py 中使用 Plotly 绘制",
+        "主曲线: 平滑后的温度-位移曲线（实线）",
+        "低温基准线: 虚线，延伸至与中间切线的交点",
+        "高温基准线: 虚线，延伸至与中间切线的交点",
+        "中间切线: 虚线，延伸至与两条基准线的交点",
+        "As 交点处显示圆点标记和温度文本标注",
+        "Af-tan 交点处显示圆点标记和温度文本标注",
+        "图表标题包含通道名称",
+        "图表配色和标注风格符合 design-system/af-analyzer/MASTER.md 设计规范（主曲线 #8B9DC3，基准线 #A4B8A4/#D4B896，中间切线 #C4A4A4）",
+        "Verify in browser using Playwright MCP"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "参考 YY/T 1771-2021 图5 的风格"
+    },
+    {
+      "id": "US-013",
+      "title": "结果显示面板",
+      "description": "作为用户，我需要清楚地看到分析结果数值。",
+      "acceptanceCriteria": [
+        "在 ui/results_panel.py 中实现结果面板",
+        "使用 st.metric 显示 As 温度（保留 1 位小数，单位 °C）",
+        "使用 st.metric 显示 Af-tan 温度（保留 1 位小数，单位 °C）",
+        "显示分析参数摘要（平滑窗口、多项式阶数、基准线范围、最大斜率点温度）",
+        "参数调整后实时更新",
+        "UI 样式符合 design-system/af-analyzer/MASTER.md 设计规范（深色毛玻璃 + 莫兰迪配色）",
+        "Verify in browser using Playwright MCP"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "分析图表导出为 PNG 图片",
+      "description": "作为用户，我需要将分析图表下载为高清图片。",
+      "acceptanceCriteria": [
+        "在 core/report_export.py 中实现 generate_analysis_figure() 函数，用 Matplotlib 生成静态分析图",
+        "图中包含主曲线、三条切线（虚线）、As/Af-tan 标注点和温度文本",
+        "在结果面板下方添加「导出图片」st.download_button",
+        "下载 PNG 文件，分辨率 300 DPI",
+        "Verify in browser using Playwright MCP"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "图表设置 — Y 轴范围自适应",
+      "description": "作为用户，我需要图表的 Y 轴范围能够自适应数据的实际值域，而不是硬编码上限。当前 Y 轴范围滑块上限固定为 500，但实际数据位移值可能超过 650+，导致显示不全。",
+      "acceptanceCriteria": [
+        "侧边栏图表设置中，Y 轴范围滑块的 min_value 和 max_value 根据当前加载数据的实际值域动态计算（留 10% 余量）",
+        "X 轴范围滑块同理，根据实际温度范围动态设置",
+        "默认值（自定义关闭时）自动适应数据范围，无需手动调整",
+        "使用 原始数据/2026.2.28/data2.xlsx（Space1 值域 219~654）验证 Y 轴显示完整",
+        "Verify in browser using Playwright MCP"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": "当前 sidebar.py 中 Y 轴滑块 max_value 硬编码为 500.0，需改为动态值"
+    },
+    {
+      "id": "US-015",
+      "title": "Excel 分析报告导出",
+      "description": "作为用户，我需要导出包含完整分析记录的 Excel 报告。",
+      "acceptanceCriteria": [
+        "在 core/report_export.py 中实现 export_excel_report() 函数",
+        "Sheet1「分析结果」: 文件名、通道、As、Af-tan、平滑参数、基准线范围",
+        "Sheet2「处理数据」: 预处理后的温度-位移数据表",
+        "在结果面板添加「导出报告」st.download_button",
+        "点击后下载 .xlsx 文件",
+        "Verify in browser using Playwright MCP"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": "图表嵌入 Excel 的实现较复杂，如不稳定可省略图表 Sheet"
+    }
+  ]
+}
