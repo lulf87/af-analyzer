@@ -90,6 +90,11 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+> **Windows 用户：** 如果提示 "streamlit 无法识别"，请使用：
+> ```cmd
+> python -m streamlit run app.py
+> ```
+
 浏览器会自动打开 `http://localhost:8501`，即可开始使用。
 
 ### Windows 注意事项
@@ -108,7 +113,13 @@ streamlit run app.py
    python -m venv .venv
    .venv\Scripts\activate
    pip install -r requirements.txt
-   streamlit run app.py
+   python -m streamlit run app.py
+   ```
+
+4. **如果 `streamlit` 命令无法识别：**
+   ```cmd
+   # 使用 python -m 运行（推荐）
+   python -m streamlit run app.py
    ```
 
 ## 使用流程
