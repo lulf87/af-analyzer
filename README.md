@@ -42,8 +42,11 @@ cd af-analyzer
 
 # 创建虚拟环境（推荐）
 python -m venv .venv
-source .venv/bin/activate   # macOS/Linux
-# .venv\Scripts\activate    # Windows
+
+# 激活虚拟环境
+source .venv/bin/activate      # macOS/Linux
+.venv\Scripts\activate         # Windows (CMD)
+# 或 .venv\Scripts\Activate.ps1  # Windows (PowerShell)
 
 # 安装依赖
 pip install -r requirements.txt
@@ -56,6 +59,25 @@ streamlit run app.py
 ```
 
 浏览器会自动打开 `http://localhost:8501`，即可开始使用。
+
+### Windows 注意事项
+
+1. **确保 Python 已添加到 PATH** — 安装 Python 时勾选 "Add Python to PATH"
+
+2. **PowerShell 执行策略** — 如果无法激活虚拟环境，先运行：
+   ```powershell
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+   ```
+
+3. **完整流程（Windows CMD）：**
+   ```cmd
+   git clone https://github.com/lulf87/af-analyzer.git
+   cd af-analyzer
+   python -m venv .venv
+   .venv\Scripts\activate
+   pip install -r requirements.txt
+   streamlit run app.py
+   ```
 
 ## 使用流程
 
