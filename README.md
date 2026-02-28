@@ -117,8 +117,18 @@ streamlit run app.py
    ```
 
 4. **如果 `streamlit` 命令无法识别：**
+
+   首先检查 streamlit 是否安装成功：
    ```cmd
-   # 使用 python -m 运行（推荐）
+   pip show streamlit
+   ```
+   如果显示 "not found"，说明未安装：
+   ```cmd
+   pip install streamlit
+   ```
+
+   如果已安装但仍无法识别，使用 python -m 运行：
+   ```cmd
    python -m streamlit run app.py
    ```
 
